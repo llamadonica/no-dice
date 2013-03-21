@@ -42,8 +42,10 @@ public class Main : Object
 			builder.add_from_file (UI_FILE);
 			builder.connect_signals (this);
 
-			var window = builder.get_object ("window") as Window;
+			var window    = builder.get_object ("window") as Window;
+			var combo_box = builder.get_object ("combo-box-die-type") as ComboBoxText;
 			/* ANJUTA: Widgets initialization for no_dice.ui - DO NOT REMOVE */
+			combo_box.active_id = "d/d6";
 			window.show_all ();
 		} 
 		catch (Error e) {
@@ -56,6 +58,44 @@ public class Main : Object
 	public void on_destroy (Widget window) 
 	{
 		Gtk.main_quit();
+	}
+	
+	[CCode (instance_pos = -1)]
+	public void on_validate_number_entry (Editable edit, string new_text, int new_text_length, ref int position)
+	{
+		var return_text = new StringBuilder ();
+		unichar current_char = '\0';
+		for (int i = 0; i < new_text.length; i++) {
+			if (new_text.valid_char (i)) {
+				current_char = new_text.get_char (i);
+				if (current_char.isdigit ()) {
+					return_text.append_unichar (current_char);
+				}
+			}
+		}
+		SignalHandler.block_by_func (edit, (void*) Main.on_validate_number_entry, this);
+		edit.insert_text (return_text.str, return_text.str.length, ref position);
+		SignalHandler.unblock_by_func (edit, (void*) Main.on_validate_number_entry, this);
+		Signal.stop_emission_by_name (edit,"insert_text");
+	}
+	
+	[CCode (instance_pos = -1)]
+	public void on_validate_plus_minus_number_entry (Editable edit, string new_text, int new_text_length, ref int position)
+	{
+		var return_text = new StringBuilder ();
+		unichar current_char = '\0';
+		for (int i = 0; i < new_text.length; i++) {
+			if (new_text.valid_char (i)) {
+				current_char = new_text.get_char (i);
+				if (current_char.isdigit () || current_char == '+' || current_char == '-') {
+					return_text.append_unichar (current_char);
+				}
+			}
+		}
+		SignalHandler.block_by_func (edit, (void*) Main.on_validate_number_entry, this);
+		edit.insert_text (return_text.str, return_text.str.length, ref position);
+		SignalHandler.unblock_by_func (edit, (void*) Main.on_validate_number_entry, this);
+		Signal.stop_emission_by_name (edit,"insert_text");
 	}
 
 	static int main (string[] args) 

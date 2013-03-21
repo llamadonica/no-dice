@@ -40,6 +40,7 @@ typedef struct _MainClass MainClass;
 typedef struct _MainPrivate MainPrivate;
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define _g_error_free0(var) ((var == NULL) ? NULL : (var = (g_error_free (var), NULL)))
+#define _g_string_free0(var) ((var == NULL) ? NULL : (var = (g_string_free (var, TRUE), NULL)))
 
 struct _Main {
 	GObject parent_instance;
@@ -61,6 +62,8 @@ enum  {
 Main* main_new (void);
 Main* main_construct (GType object_type);
 void main_on_destroy (GtkWidget* window, Main* self);
+void main_on_validate_number_entry (GtkEditable* edit, const gchar* new_text, gint new_text_length, gint* position, Main* self);
+void main_on_validate_plus_minus_number_entry (GtkEditable* edit, const gchar* new_text, gint new_text_length, gint* position, Main* self);
 static gint main_main (gchar** args, int args_length1);
 
 
@@ -79,7 +82,11 @@ Main* main_construct (GType object_type) {
 		GObject* _tmp1_ = NULL;
 		GtkWindow* _tmp2_;
 		GtkWindow* window;
-		GtkWindow* _tmp3_;
+		GObject* _tmp3_ = NULL;
+		GtkComboBoxText* _tmp4_;
+		GtkComboBoxText* combo_box;
+		GtkComboBoxText* _tmp5_;
+		GtkWindow* _tmp6_;
 		_tmp0_ = gtk_builder_new ();
 		builder = _tmp0_;
 		gtk_builder_add_from_file (builder, MAIN_UI_FILE, &_inner_error_);
@@ -91,8 +98,14 @@ Main* main_construct (GType object_type) {
 		_tmp1_ = gtk_builder_get_object (builder, "window");
 		_tmp2_ = _g_object_ref0 (GTK_IS_WINDOW (_tmp1_) ? ((GtkWindow*) _tmp1_) : NULL);
 		window = _tmp2_;
-		_tmp3_ = window;
-		gtk_widget_show_all ((GtkWidget*) _tmp3_);
+		_tmp3_ = gtk_builder_get_object (builder, "combo-box-die-type");
+		_tmp4_ = _g_object_ref0 (GTK_IS_COMBO_BOX_TEXT (_tmp3_) ? ((GtkComboBoxText*) _tmp3_) : NULL);
+		combo_box = _tmp4_;
+		_tmp5_ = combo_box;
+		gtk_combo_box_set_active_id ((GtkComboBox*) _tmp5_, "d/d6");
+		_tmp6_ = window;
+		gtk_widget_show_all ((GtkWidget*) _tmp6_);
+		_g_object_unref0 (combo_box);
 		_g_object_unref0 (window);
 		_g_object_unref0 (builder);
 	}
@@ -100,15 +113,15 @@ Main* main_construct (GType object_type) {
 	__catch0_g_error:
 	{
 		GError* e = NULL;
-		FILE* _tmp4_;
-		GError* _tmp5_;
-		const gchar* _tmp6_;
+		FILE* _tmp7_;
+		GError* _tmp8_;
+		const gchar* _tmp9_;
 		e = _inner_error_;
 		_inner_error_ = NULL;
-		_tmp4_ = stderr;
-		_tmp5_ = e;
-		_tmp6_ = _tmp5_->message;
-		fprintf (_tmp4_, "Could not load UI: %s\n", _tmp6_);
+		_tmp7_ = stderr;
+		_tmp8_ = e;
+		_tmp9_ = _tmp8_->message;
+		fprintf (_tmp7_, "Could not load UI: %s\n", _tmp9_);
 		_g_error_free0 (e);
 	}
 	__finally0:
@@ -130,6 +143,275 @@ void main_on_destroy (GtkWidget* window, Main* self) {
 	g_return_if_fail (self != NULL);
 	g_return_if_fail (window != NULL);
 	gtk_main_quit ();
+}
+
+
+static gboolean string_valid_char (const gchar* self, gint index) {
+	gboolean result = FALSE;
+	gint _tmp0_;
+	guint8 _tmp1_;
+	guint8 c;
+	gboolean _tmp2_ = FALSE;
+	gboolean _tmp3_ = FALSE;
+	guint8 _tmp4_;
+	gboolean _tmp9_;
+	gboolean _tmp11_;
+	g_return_val_if_fail (self != NULL, FALSE);
+	_tmp0_ = index;
+	_tmp1_ = ((guint8*) self)[_tmp0_];
+	c = _tmp1_;
+	_tmp4_ = c;
+	if (((gint) _tmp4_) == 0x00) {
+		_tmp3_ = TRUE;
+	} else {
+		gboolean _tmp5_ = FALSE;
+		guint8 _tmp6_;
+		gboolean _tmp8_;
+		_tmp6_ = c;
+		if (((gint) _tmp6_) >= 0x80) {
+			guint8 _tmp7_;
+			_tmp7_ = c;
+			_tmp5_ = ((gint) _tmp7_) < 0xc2;
+		} else {
+			_tmp5_ = FALSE;
+		}
+		_tmp8_ = _tmp5_;
+		_tmp3_ = _tmp8_;
+	}
+	_tmp9_ = _tmp3_;
+	if (_tmp9_) {
+		_tmp2_ = TRUE;
+	} else {
+		guint8 _tmp10_;
+		_tmp10_ = c;
+		_tmp2_ = ((gint) _tmp10_) >= 0xf5;
+	}
+	_tmp11_ = _tmp2_;
+	if (_tmp11_) {
+		result = FALSE;
+		return result;
+	} else {
+		result = TRUE;
+		return result;
+	}
+}
+
+
+static gunichar string_get_char (const gchar* self, glong index) {
+	gunichar result = 0U;
+	glong _tmp0_;
+	gunichar _tmp1_ = 0U;
+	g_return_val_if_fail (self != NULL, 0U);
+	_tmp0_ = index;
+	_tmp1_ = g_utf8_get_char (((gchar*) self) + _tmp0_);
+	result = _tmp1_;
+	return result;
+}
+
+
+void main_on_validate_number_entry (GtkEditable* edit, const gchar* new_text, gint new_text_length, gint* position, Main* self) {
+	GString* _tmp0_;
+	GString* return_text;
+	gunichar current_char;
+	GtkEditable* _tmp18_;
+	GtkEditable* _tmp19_;
+	GString* _tmp20_;
+	const gchar* _tmp21_;
+	GString* _tmp22_;
+	const gchar* _tmp23_;
+	gint _tmp24_;
+	gint _tmp25_;
+	GtkEditable* _tmp26_;
+	GtkEditable* _tmp27_;
+	g_return_if_fail (self != NULL);
+	g_return_if_fail (edit != NULL);
+	g_return_if_fail (new_text != NULL);
+	_tmp0_ = g_string_new ("");
+	return_text = _tmp0_;
+	current_char = (gunichar) '\0';
+	{
+		gint i;
+		i = 0;
+		{
+			gboolean _tmp1_;
+			_tmp1_ = TRUE;
+			while (TRUE) {
+				gboolean _tmp2_;
+				gint _tmp4_;
+				const gchar* _tmp5_;
+				gint _tmp6_;
+				gint _tmp7_;
+				const gchar* _tmp8_;
+				gint _tmp9_;
+				gboolean _tmp10_ = FALSE;
+				_tmp2_ = _tmp1_;
+				if (!_tmp2_) {
+					gint _tmp3_;
+					_tmp3_ = i;
+					i = _tmp3_ + 1;
+				}
+				_tmp1_ = FALSE;
+				_tmp4_ = i;
+				_tmp5_ = new_text;
+				_tmp6_ = strlen (_tmp5_);
+				_tmp7_ = _tmp6_;
+				if (!(_tmp4_ < _tmp7_)) {
+					break;
+				}
+				_tmp8_ = new_text;
+				_tmp9_ = i;
+				_tmp10_ = string_valid_char (_tmp8_, _tmp9_);
+				if (_tmp10_) {
+					const gchar* _tmp11_;
+					gint _tmp12_;
+					gunichar _tmp13_ = 0U;
+					gunichar _tmp14_;
+					gboolean _tmp15_ = FALSE;
+					_tmp11_ = new_text;
+					_tmp12_ = i;
+					_tmp13_ = string_get_char (_tmp11_, (glong) _tmp12_);
+					current_char = _tmp13_;
+					_tmp14_ = current_char;
+					_tmp15_ = g_unichar_isdigit (_tmp14_);
+					if (_tmp15_) {
+						GString* _tmp16_;
+						gunichar _tmp17_;
+						_tmp16_ = return_text;
+						_tmp17_ = current_char;
+						g_string_append_unichar (_tmp16_, _tmp17_);
+					}
+				}
+			}
+		}
+	}
+	_tmp18_ = edit;
+	g_signal_handlers_block_by_func (_tmp18_, (void*) main_on_validate_number_entry, self);
+	_tmp19_ = edit;
+	_tmp20_ = return_text;
+	_tmp21_ = _tmp20_->str;
+	_tmp22_ = return_text;
+	_tmp23_ = _tmp22_->str;
+	_tmp24_ = strlen (_tmp23_);
+	_tmp25_ = _tmp24_;
+	gtk_editable_insert_text (_tmp19_, _tmp21_, _tmp25_, position);
+	_tmp26_ = edit;
+	g_signal_handlers_unblock_by_func (_tmp26_, (void*) main_on_validate_number_entry, self);
+	_tmp27_ = edit;
+	g_signal_stop_emission_by_name (_tmp27_, "insert_text");
+	_g_string_free0 (return_text);
+}
+
+
+void main_on_validate_plus_minus_number_entry (GtkEditable* edit, const gchar* new_text, gint new_text_length, gint* position, Main* self) {
+	GString* _tmp0_;
+	GString* return_text;
+	gunichar current_char;
+	GtkEditable* _tmp24_;
+	GtkEditable* _tmp25_;
+	GString* _tmp26_;
+	const gchar* _tmp27_;
+	GString* _tmp28_;
+	const gchar* _tmp29_;
+	gint _tmp30_;
+	gint _tmp31_;
+	GtkEditable* _tmp32_;
+	GtkEditable* _tmp33_;
+	g_return_if_fail (self != NULL);
+	g_return_if_fail (edit != NULL);
+	g_return_if_fail (new_text != NULL);
+	_tmp0_ = g_string_new ("");
+	return_text = _tmp0_;
+	current_char = (gunichar) '\0';
+	{
+		gint i;
+		i = 0;
+		{
+			gboolean _tmp1_;
+			_tmp1_ = TRUE;
+			while (TRUE) {
+				gboolean _tmp2_;
+				gint _tmp4_;
+				const gchar* _tmp5_;
+				gint _tmp6_;
+				gint _tmp7_;
+				const gchar* _tmp8_;
+				gint _tmp9_;
+				gboolean _tmp10_ = FALSE;
+				_tmp2_ = _tmp1_;
+				if (!_tmp2_) {
+					gint _tmp3_;
+					_tmp3_ = i;
+					i = _tmp3_ + 1;
+				}
+				_tmp1_ = FALSE;
+				_tmp4_ = i;
+				_tmp5_ = new_text;
+				_tmp6_ = strlen (_tmp5_);
+				_tmp7_ = _tmp6_;
+				if (!(_tmp4_ < _tmp7_)) {
+					break;
+				}
+				_tmp8_ = new_text;
+				_tmp9_ = i;
+				_tmp10_ = string_valid_char (_tmp8_, _tmp9_);
+				if (_tmp10_) {
+					const gchar* _tmp11_;
+					gint _tmp12_;
+					gunichar _tmp13_ = 0U;
+					gboolean _tmp14_ = FALSE;
+					gboolean _tmp15_ = FALSE;
+					gunichar _tmp16_;
+					gboolean _tmp17_ = FALSE;
+					gboolean _tmp19_;
+					gboolean _tmp21_;
+					_tmp11_ = new_text;
+					_tmp12_ = i;
+					_tmp13_ = string_get_char (_tmp11_, (glong) _tmp12_);
+					current_char = _tmp13_;
+					_tmp16_ = current_char;
+					_tmp17_ = g_unichar_isdigit (_tmp16_);
+					if (_tmp17_) {
+						_tmp15_ = TRUE;
+					} else {
+						gunichar _tmp18_;
+						_tmp18_ = current_char;
+						_tmp15_ = _tmp18_ == ((gunichar) '+');
+					}
+					_tmp19_ = _tmp15_;
+					if (_tmp19_) {
+						_tmp14_ = TRUE;
+					} else {
+						gunichar _tmp20_;
+						_tmp20_ = current_char;
+						_tmp14_ = _tmp20_ == ((gunichar) '-');
+					}
+					_tmp21_ = _tmp14_;
+					if (_tmp21_) {
+						GString* _tmp22_;
+						gunichar _tmp23_;
+						_tmp22_ = return_text;
+						_tmp23_ = current_char;
+						g_string_append_unichar (_tmp22_, _tmp23_);
+					}
+				}
+			}
+		}
+	}
+	_tmp24_ = edit;
+	g_signal_handlers_block_by_func (_tmp24_, (void*) main_on_validate_number_entry, self);
+	_tmp25_ = edit;
+	_tmp26_ = return_text;
+	_tmp27_ = _tmp26_->str;
+	_tmp28_ = return_text;
+	_tmp29_ = _tmp28_->str;
+	_tmp30_ = strlen (_tmp29_);
+	_tmp31_ = _tmp30_;
+	gtk_editable_insert_text (_tmp25_, _tmp27_, _tmp31_, position);
+	_tmp32_ = edit;
+	g_signal_handlers_unblock_by_func (_tmp32_, (void*) main_on_validate_number_entry, self);
+	_tmp33_ = edit;
+	g_signal_stop_emission_by_name (_tmp33_, "insert_text");
+	_g_string_free0 (return_text);
 }
 
 
