@@ -32,6 +32,8 @@ public class Main : Object
 
 	/* ANJUTA: Widgets declaration for no_dice.ui - DO NOT REMOVE */
 
+	private int number_of_dice = 1;
+	private int adjustment = 0;
 
 	public Main ()
 	{
@@ -72,11 +74,23 @@ public class Main : Object
 					return_text.append_unichar (current_char);
 				}
 			}
-		}
+		} 
 		SignalHandler.block_by_func (edit, (void*) Main.on_validate_number_entry, this);
 		edit.insert_text (return_text.str, return_text.str.length, ref position);
 		SignalHandler.unblock_by_func (edit, (void*) Main.on_validate_number_entry, this);
 		Signal.stop_emission_by_name (edit,"insert_text");
+	}
+
+	[CCode (instance_pos = -1)]
+	public bool on_blur_number_of_dice (Entry edit, DirectionType dir)
+	{
+		var return_value = int.parse (edit.text);
+		if (return_value < 1) {
+			return_value = 1;
+			edit.text = "1";
+		}
+		this.number_of_dice = return_value;
+		return false;
 	}
 	
 	[CCode (instance_pos = -1)]
@@ -92,10 +106,29 @@ public class Main : Object
 				}
 			}
 		}
-		SignalHandler.block_by_func (edit, (void*) Main.on_validate_number_entry, this);
+		SignalHandler.block_by_func (edit, (void*) Main.on_validate_plus_minus_number_entry, this);
 		edit.insert_text (return_text.str, return_text.str.length, ref position);
-		SignalHandler.unblock_by_func (edit, (void*) Main.on_validate_number_entry, this);
+		SignalHandler.unblock_by_func (edit, (void*) Main.on_validate_plus_minus_number_entry, this);
 		Signal.stop_emission_by_name (edit,"insert_text");
+	}
+    
+	[CCode (instance_pos = -1)]
+	public bool on_blur_plus_minus_number_entry (Entry edit, DirectionType dir) 
+	{
+		this.adjustment = int.parse (edit.text);
+		if (this.adjustment == 0)
+		{
+			edit.text = "";
+		}
+		else if (this.adjustment > 0)
+		{
+			edit.text = "+%d".printf(this.adjustment);
+		}
+		else
+		{
+			edit.text = "%d".printf(this.adjustment);
+		}
+		return false;
 	}
 
 	static int main (string[] args) 

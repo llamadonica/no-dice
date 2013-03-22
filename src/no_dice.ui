@@ -84,6 +84,7 @@
             <property name="text" translatable="yes">1</property>
             <property name="progress_fraction">0.0099999997764825821</property>
             <signal name="insert-text" handler="main_on_validate_number_entry" swapped="no"/>
+            <signal name="focus-out-event" handler="main_on_blur_number_of_dice" swapped="no"/>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -98,6 +99,8 @@
             <property name="can_focus">True</property>
             <property name="hexpand">True</property>
             <property name="invisible_char">•</property>
+            <signal name="insert-text" handler="main_on_validate_plus_minus_number_entry" swapped="no"/>
+            <signal name="focus-out-event" handler="main_on_blur_plus_minus_number_entry" swapped="no"/>
           </object>
           <packing>
             <property name="left_attach">3</property>
@@ -140,21 +143,6 @@
           </packing>
         </child>
         <child>
-          <placeholder/>
-        </child>
-        <child>
-          <placeholder/>
-        </child>
-        <child>
-          <placeholder/>
-        </child>
-        <child>
-          <placeholder/>
-        </child>
-        <child>
-          <placeholder/>
-        </child>
-        <child>
           <object class="GtkComboBoxText" id="combo-box-die-type">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
@@ -178,6 +166,21 @@
             <property name="width">1</property>
             <property name="height">1</property>
           </packing>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+        <child>
+          <placeholder/>
         </child>
       </object>
     </child>

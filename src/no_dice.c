@@ -41,6 +41,7 @@ typedef struct _MainPrivate MainPrivate;
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define _g_error_free0(var) ((var == NULL) ? NULL : (var = (g_error_free (var), NULL)))
 #define _g_string_free0(var) ((var == NULL) ? NULL : (var = (g_string_free (var, TRUE), NULL)))
+#define _g_free0(var) (var = (g_free (var), NULL))
 
 struct _Main {
 	GObject parent_instance;
@@ -51,10 +52,16 @@ struct _MainClass {
 	GObjectClass parent_class;
 };
 
+struct _MainPrivate {
+	gint number_of_dice;
+	gint adjustment;
+};
+
 
 static gpointer main_parent_class = NULL;
 
 GType main_get_type (void) G_GNUC_CONST;
+#define MAIN_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_MAIN, MainPrivate))
 enum  {
 	MAIN_DUMMY_PROPERTY
 };
@@ -63,8 +70,11 @@ Main* main_new (void);
 Main* main_construct (GType object_type);
 void main_on_destroy (GtkWidget* window, Main* self);
 void main_on_validate_number_entry (GtkEditable* edit, const gchar* new_text, gint new_text_length, gint* position, Main* self);
+gboolean main_on_blur_number_of_dice (GtkEntry* edit, GtkDirectionType dir, Main* self);
 void main_on_validate_plus_minus_number_entry (GtkEditable* edit, const gchar* new_text, gint new_text_length, gint* position, Main* self);
+gboolean main_on_blur_plus_minus_number_entry (GtkEntry* edit, GtkDirectionType dir, Main* self);
 static gint main_main (gchar** args, int args_length1);
+static void main_finalize (GObject* obj);
 
 
 static gpointer _g_object_ref0 (gpointer self) {
@@ -302,6 +312,36 @@ void main_on_validate_number_entry (GtkEditable* edit, const gchar* new_text, gi
 }
 
 
+gboolean main_on_blur_number_of_dice (GtkEntry* edit, GtkDirectionType dir, Main* self) {
+	gboolean result = FALSE;
+	GtkEntry* _tmp0_;
+	const gchar* _tmp1_;
+	const gchar* _tmp2_;
+	gint _tmp3_ = 0;
+	gint return_value;
+	gint _tmp4_;
+	gint _tmp6_;
+	g_return_val_if_fail (self != NULL, FALSE);
+	g_return_val_if_fail (edit != NULL, FALSE);
+	_tmp0_ = edit;
+	_tmp1_ = gtk_entry_get_text (_tmp0_);
+	_tmp2_ = _tmp1_;
+	_tmp3_ = atoi (_tmp2_);
+	return_value = _tmp3_;
+	_tmp4_ = return_value;
+	if (_tmp4_ < 1) {
+		GtkEntry* _tmp5_;
+		return_value = 1;
+		_tmp5_ = edit;
+		gtk_entry_set_text (_tmp5_, "1");
+	}
+	_tmp6_ = return_value;
+	self->priv->number_of_dice = _tmp6_;
+	result = FALSE;
+	return result;
+}
+
+
 void main_on_validate_plus_minus_number_entry (GtkEditable* edit, const gchar* new_text, gint new_text_length, gint* position, Main* self) {
 	GString* _tmp0_;
 	GString* return_text;
@@ -398,7 +438,7 @@ void main_on_validate_plus_minus_number_entry (GtkEditable* edit, const gchar* n
 		}
 	}
 	_tmp24_ = edit;
-	g_signal_handlers_block_by_func (_tmp24_, (void*) main_on_validate_number_entry, self);
+	g_signal_handlers_block_by_func (_tmp24_, (void*) main_on_validate_plus_minus_number_entry, self);
 	_tmp25_ = edit;
 	_tmp26_ = return_text;
 	_tmp27_ = _tmp26_->str;
@@ -408,10 +448,61 @@ void main_on_validate_plus_minus_number_entry (GtkEditable* edit, const gchar* n
 	_tmp31_ = _tmp30_;
 	gtk_editable_insert_text (_tmp25_, _tmp27_, _tmp31_, position);
 	_tmp32_ = edit;
-	g_signal_handlers_unblock_by_func (_tmp32_, (void*) main_on_validate_number_entry, self);
+	g_signal_handlers_unblock_by_func (_tmp32_, (void*) main_on_validate_plus_minus_number_entry, self);
 	_tmp33_ = edit;
 	g_signal_stop_emission_by_name (_tmp33_, "insert_text");
 	_g_string_free0 (return_text);
+}
+
+
+gboolean main_on_blur_plus_minus_number_entry (GtkEntry* edit, GtkDirectionType dir, Main* self) {
+	gboolean result = FALSE;
+	GtkEntry* _tmp0_;
+	const gchar* _tmp1_;
+	const gchar* _tmp2_;
+	gint _tmp3_ = 0;
+	gint _tmp4_;
+	g_return_val_if_fail (self != NULL, FALSE);
+	g_return_val_if_fail (edit != NULL, FALSE);
+	_tmp0_ = edit;
+	_tmp1_ = gtk_entry_get_text (_tmp0_);
+	_tmp2_ = _tmp1_;
+	_tmp3_ = atoi (_tmp2_);
+	self->priv->adjustment = _tmp3_;
+	_tmp4_ = self->priv->adjustment;
+	if (_tmp4_ == 0) {
+		GtkEntry* _tmp5_;
+		_tmp5_ = edit;
+		gtk_entry_set_text (_tmp5_, "");
+	} else {
+		gint _tmp6_;
+		_tmp6_ = self->priv->adjustment;
+		if (_tmp6_ > 0) {
+			GtkEntry* _tmp7_;
+			gint _tmp8_;
+			gchar* _tmp9_ = NULL;
+			gchar* _tmp10_;
+			_tmp7_ = edit;
+			_tmp8_ = self->priv->adjustment;
+			_tmp9_ = g_strdup_printf ("+%d", _tmp8_);
+			_tmp10_ = _tmp9_;
+			gtk_entry_set_text (_tmp7_, _tmp10_);
+			_g_free0 (_tmp10_);
+		} else {
+			GtkEntry* _tmp11_;
+			gint _tmp12_;
+			gchar* _tmp13_ = NULL;
+			gchar* _tmp14_;
+			_tmp11_ = edit;
+			_tmp12_ = self->priv->adjustment;
+			_tmp13_ = g_strdup_printf ("%d", _tmp12_);
+			_tmp14_ = _tmp13_;
+			gtk_entry_set_text (_tmp11_, _tmp14_);
+			_g_free0 (_tmp14_);
+		}
+	}
+	result = FALSE;
+	return result;
 }
 
 
@@ -437,10 +528,22 @@ int main (int argc, char ** argv) {
 
 static void main_class_init (MainClass * klass) {
 	main_parent_class = g_type_class_peek_parent (klass);
+	g_type_class_add_private (klass, sizeof (MainPrivate));
+	G_OBJECT_CLASS (klass)->finalize = main_finalize;
 }
 
 
 static void main_instance_init (Main * self) {
+	self->priv = MAIN_GET_PRIVATE (self);
+	self->priv->number_of_dice = 1;
+	self->priv->adjustment = 0;
+}
+
+
+static void main_finalize (GObject* obj) {
+	Main * self;
+	self = MAIN (obj);
+	G_OBJECT_CLASS (main_parent_class)->finalize (obj);
 }
 
 
