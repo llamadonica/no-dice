@@ -20,6 +20,16 @@
 using GLib;
 using Gtk;
 
+public errordomain ParseError {
+	NO_PARSE
+}
+
+public struct Die {
+	public int const_or_number;
+	public int sides;
+	public bool is_fudge;
+}
+
 public class Main : Object 
 {
 
@@ -130,6 +140,30 @@ public class Main : Object
 		}
 		return false;
 	}
+
+	[CCode (instance_pos = -1)]
+	public bool on_blur_manual_dice_entry (Entry edit, DirectionType dir) 
+	{
+		return false;
+	}
+
+	public void parse_digit (ref string p, StringBuilder output) throws ParseError
+	{
+		var ch = p.get_char ();
+		if (ch.isdigit()) {
+			output.append_unichar (ch);
+			p = p.next_char ();
+		}
+		else {
+			throw new ParseError.NO_PARSE("digit");
+		}
+	}
+
+	public int parse_integer (ref string p) throws ParseError
+	{
+		
+	}
+
 
 	static int main (string[] args) 
 	{

@@ -22,11 +22,14 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include <gtk/gtk.h>
 #include <stdio.h>
 
+
+#define TYPE_DIE (die_get_type ())
+typedef struct _Die Die;
 
 #define TYPE_MAIN (main_get_type ())
 #define MAIN(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_MAIN, Main))
@@ -42,6 +45,16 @@ typedef struct _MainPrivate MainPrivate;
 #define _g_error_free0(var) ((var == NULL) ? NULL : (var = (g_error_free (var), NULL)))
 #define _g_string_free0(var) ((var == NULL) ? NULL : (var = (g_string_free (var, TRUE), NULL)))
 #define _g_free0(var) (var = (g_free (var), NULL))
+
+typedef enum  {
+	PARSE_ERROR_NO_PARSE
+} ParseError;
+#define PARSE_ERROR parse_error_quark ()
+struct _Die {
+	gint const_or_number;
+	gint sides;
+	gboolean is_fudge;
+};
 
 struct _Main {
 	GObject parent_instance;
@@ -60,6 +73,10 @@ struct _MainPrivate {
 
 static gpointer main_parent_class = NULL;
 
+GQuark parse_error_quark (void);
+GType die_get_type (void) G_GNUC_CONST;
+Die* die_dup (const Die* self);
+void die_free (Die* self);
 GType main_get_type (void) G_GNUC_CONST;
 #define MAIN_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_MAIN, MainPrivate))
 enum  {
@@ -73,8 +90,39 @@ void main_on_validate_number_entry (GtkEditable* edit, const gchar* new_text, gi
 gboolean main_on_blur_number_of_dice (GtkEntry* edit, GtkDirectionType dir, Main* self);
 void main_on_validate_plus_minus_number_entry (GtkEditable* edit, const gchar* new_text, gint new_text_length, gint* position, Main* self);
 gboolean main_on_blur_plus_minus_number_entry (GtkEntry* edit, GtkDirectionType dir, Main* self);
+gboolean main_on_blur_manual_dice_entry (GtkEntry* edit, GtkDirectionType dir, Main* self);
+void main_parse_digit (Main* self, gchar** p, GString* output, GError** error);
 static gint main_main (gchar** args, int args_length1);
 static void main_finalize (GObject* obj);
+
+
+GQuark parse_error_quark (void) {
+	return g_quark_from_static_string ("parse_error-quark");
+}
+
+
+Die* die_dup (const Die* self) {
+	Die* dup;
+	dup = g_new0 (Die, 1);
+	memcpy (dup, self, sizeof (Die));
+	return dup;
+}
+
+
+void die_free (Die* self) {
+	g_free (self);
+}
+
+
+GType die_get_type (void) {
+	static volatile gsize die_type_id__volatile = 0;
+	if (g_once_init_enter (&die_type_id__volatile)) {
+		GType die_type_id;
+		die_type_id = g_boxed_type_register_static ("Die", (GBoxedCopyFunc) die_dup, (GBoxedFreeFunc) die_free);
+		g_once_init_leave (&die_type_id__volatile, die_type_id);
+	}
+	return die_type_id__volatile;
+}
 
 
 static gpointer _g_object_ref0 (gpointer self) {
@@ -503,6 +551,60 @@ gboolean main_on_blur_plus_minus_number_entry (GtkEntry* edit, GtkDirectionType 
 	}
 	result = FALSE;
 	return result;
+}
+
+
+gboolean main_on_blur_manual_dice_entry (GtkEntry* edit, GtkDirectionType dir, Main* self) {
+	gboolean result = FALSE;
+	g_return_val_if_fail (self != NULL, FALSE);
+	g_return_val_if_fail (edit != NULL, FALSE);
+	result = FALSE;
+	return result;
+}
+
+
+void main_parse_digit (Main* self, gchar** p, GString* output, GError** error) {
+	const gchar* _tmp0_;
+	gunichar _tmp1_ = 0U;
+	gunichar ch;
+	gunichar _tmp2_;
+	gboolean _tmp3_ = FALSE;
+	GError * _inner_error_ = NULL;
+	g_return_if_fail (self != NULL);
+	g_return_if_fail (*p != NULL);
+	g_return_if_fail (output != NULL);
+	_tmp0_ = *p;
+	_tmp1_ = string_get_char (_tmp0_, (glong) 0);
+	ch = _tmp1_;
+	_tmp2_ = ch;
+	_tmp3_ = g_unichar_isdigit (_tmp2_);
+	if (_tmp3_) {
+		GString* _tmp4_;
+		gunichar _tmp5_;
+		const gchar* _tmp6_;
+		const gchar* _tmp7_ = NULL;
+		gchar* _tmp8_;
+		_tmp4_ = output;
+		_tmp5_ = ch;
+		g_string_append_unichar (_tmp4_, _tmp5_);
+		_tmp6_ = *p;
+		_tmp7_ = g_utf8_next_char (_tmp6_);
+		_tmp8_ = g_strdup (_tmp7_);
+		_g_free0 (*p);
+		*p = _tmp8_;
+	} else {
+		GError* _tmp9_;
+		_tmp9_ = g_error_new_literal (PARSE_ERROR, PARSE_ERROR_NO_PARSE, "digit");
+		_inner_error_ = _tmp9_;
+		if (_inner_error_->domain == PARSE_ERROR) {
+			g_propagate_error (error, _inner_error_);
+			return;
+		} else {
+			g_critical ("file %s: line %d: uncaught error: %s (%s, %d)", __FILE__, __LINE__, _inner_error_->message, g_quark_to_string (_inner_error_->domain), _inner_error_->code);
+			g_clear_error (&_inner_error_);
+			return;
+		}
+	}
 }
 
 
