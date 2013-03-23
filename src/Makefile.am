@@ -4,9 +4,14 @@
 
 
 uidir = $(pkgdatadir)/ui
-ui_DATA = no_dice.ui \
-	applications-boardgames.svg
+ui_DATA = no_dice.ui
 
+desktopdir = $(datadir)/applications
+desktop_in_files = no_dice.desktop.in		
+desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
+
+icondir = $(datadir)/pixmaps
+icon_DATA = no_dice.svg
 
 AM_CPPFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(localedir)"\" \
@@ -31,8 +36,7 @@ no_dice_LDFLAGS = \
 
 no_dice_LDADD = $(NO_DICE_LIBS)
 
-
-EXTRA_DIST = $(ui_DATA)
+EXTRA_DIST = $(ui_DATA) $(icon_DATA) $(desktop_DATA)
 
 # Remove ui directory on uninstall
 uninstall-local:

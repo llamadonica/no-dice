@@ -1,0 +1,15 @@
+Source: no_dice
+Section: misc
+Priority: extra
+Maintainer: Adam Stark (home) <llamadonica@gmail.com>
+Build-Depends: debhelper (>= 8.0.0),libglib2.0-dev, libgtk-3-dev, valac-0.16, libgee-dev
+Standards-Version: 3.9.2
+Homepage: http://llamadonica.github.com/no-dice
+Vcs-Git: git://github.com/llamadonica/no-dice.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/no-dice.git;a=summary
+
+Package: no-dice
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: A dice-rolling app.
+ A simple program that allows you to roll any combination of dice on your computer.
