@@ -24,10 +24,25 @@ public errordomain ParseError {
 	NO_PARSE
 }
 
-public struct Die {
+public class Die {
 	public int const_or_number;
 	public int sides;
 	public bool is_fudge;
+	public Die(int number, int sides) {
+		this.const_or_number = number;
+		this.sides = sides;
+		this.is_fudge = false;
+	}
+	public Die.fudge(int number) {
+		this.const_or_number = number;
+		this.sides = 1;
+		this.is_fudge = true;
+	}
+	public Die.constant (int value) {
+		this.const_or_number = value;
+		this.sides = 0;
+		this.is_fudge = false;
+	}
 }
 
 public class Main : Object 
@@ -37,8 +52,8 @@ public class Main : Object
 	 * Uncomment this line when you are done testing and building a tarball
 	 * or installing
 	 */
-	//const string UI_FILE = Config.PACKAGE_DATA_DIR + "/" + "no_dice.ui";
-	const string UI_FILE = "src/no_dice.ui";
+	const string UI_FILE = Config.PACKAGE_DATA_DIR + "/ui/" + "no_dice.ui";
+	// const string UI_FILE = "src/no_dice.ui";
 
 	/* ANJUTA: Widgets declaration for no_dice.ui - DO NOT REMOVE */
 
@@ -52,6 +67,8 @@ public class Main : Object
 	private RadioButton radio_button_enter_dice;
 	private RadioButton radio_button_skill;
 	private Label       result_label;
+    private ComboBoxText combo_box_die_type;
+    private AboutDialog about_dialog;
 
 	public Main ()
 	{
@@ -63,16 +80,19 @@ public class Main : Object
 			builder.connect_signals (this);
 
 			var window    = builder.get_object ("window") as Window;
-			var combo_box = builder.get_object ("combo-box-die-type") as ComboBoxText;
 			radio_button_enter_dice = builder.get_object ("radio-button-enter-dice") as RadioButton;
 			radio_button_pick_dice = builder.get_object ("radio-button-pick-dice") as RadioButton;
 			radio_button_skill = builder.get_object ("radio-button-skill") as RadioButton;
 			result_label = builder.get_object ("result-label") as Label;
+            combo_box_die_type = builder.get_object ("combo-box-die-type") as ComboBoxText;
+            about_dialog = builder.get_object ("about-dialog") as AboutDialog;
+            
 			/* ANJUTA: Widgets initialization for no_dice.ui - DO NOT REMOVE */
-			combo_box.active_id = "d/d6";
-			this.dice = new List<Die?> ();
-			this.dice.append ({1,6,false});
+			combo_box_die_type.active_id = "d/d6";
+			this.dice = new List<Die> ();
+			this.dice.append (new Die(1,6));
 			window.show_all ();
+            
 		} 
 		catch (Error e) {
 			stderr.printf ("Could not load UI: %s\n", e.message);
@@ -82,15 +102,52 @@ public class Main : Object
 
 	[CCode (instance_pos = -1)]
 	public void on_activate_roll (Gtk.Action roll) {
-		string result;
+		string result = "";
 		if (radio_button_skill.active) {
 			int margin; bool critical;
-			result = roll_skill_die (this.skill_level, out margin, out critical);
+			result = roll_skill_die (this.skill_level,out critical,out margin);
 		}
 		if (radio_button_enter_dice.active) {
 			result = roll_multi_die_set (this.dice);
 		}
-		result_label.text = result;
+        if (radio_button_pick_dice.active) {
+            int sides = 1;
+            bool is_fudge = false;
+            Die die;
+            switch (combo_box_die_type.active_id) {
+                case "d2":
+                    sides = 2;
+                    break;
+                case "d4":
+                    sides = 4;
+                    break;
+                case "d/d6":
+                    sides = 6;
+                    break;
+                case "d8":
+                    sides = 8;
+                    break;
+                case "d12":
+                    sides = 12;
+                    break;
+                case "d20":
+                    sides = 20;
+                    break;
+                case "d100":
+                    sides = 100;
+                    break;
+                case "dF":
+                    is_fudge = true;
+                    break;
+            }
+            if (is_fudge) {
+                die = new Die.fudge (number_of_dice);
+            } else {
+                die = new Die (number_of_dice, sides);
+            }
+            result = roll_one_die_set (die, adjustment);
+        }
+		result_label.label = result;
 		
 	}
 
@@ -99,6 +156,13 @@ public class Main : Object
 	{
 		Gtk.main_quit();
 	}
+
+	[CCode (instance_pos = -1)]
+    public void on_activate_about (Widget button)
+    {
+        this.about_dialog.run ();
+        this.about_dialog.hide ();
+    }
 	
 	[CCode (instance_pos = -1)]
 	public void on_validate_number_entry (Editable edit, string new_text, int new_text_length, ref int position)
@@ -189,7 +253,10 @@ public class Main : Object
 		try {
 			var dice = parse_dice (ref working_copy);
 			this.last_manual_entry = edit.text;
-			this.dice = dice.copy ();
+			this.dice = new List<Die> ();
+                foreach (Die die in dice) {
+                    this.dice.append (die);
+                }
 		} catch (ParseError err) {
 			stderr.printf ("ParseError: Expected %s\n", err.message);
 			edit.text = this.last_manual_entry;
@@ -247,18 +314,18 @@ public class Main : Object
 			ch = p.get_char ();
 			if (ch == 'F') {
 				p = p.next_char ();
-				return {static_part, 1, true};
+				return new Die.fudge(static_part);
 			} else if (ch.isdigit()) {
 				var sides = parse_integer (ref p);
-				return {static_part,sides,false};
+				return new Die (static_part,sides);
 			} else {
-				return {static_part,6,false};
+				return new Die (static_part,6);
 			}
 		} 
-		return {static_part, 0, false};
+		return new Die.constant (static_part);
 	}
 
-	public static List<Die?> parse_dice (ref string p) throws ParseError 
+	public static List<Die> parse_dice (ref string p) throws ParseError 
 	{
 		var dice = new List<Die?> ();
 		bool is_valid = true;
@@ -314,7 +381,7 @@ public class Main : Object
 			max = die.sides;
 		}
 		for (int i = 0; i < die.const_or_number; i++) {
-			total += Random.int_range(min, max);
+			total += Random.int_range(min, max + 1);
 		}
 	}
 
@@ -340,7 +407,7 @@ public class Main : Object
 	static string roll_skill_die (int skill,out bool critical, out int margin) {
 		bool fudge = false, tried_fudge = false;
 		int total = 0;
-		roll_die({3,6,false},ref total, ref fudge, ref tried_fudge);
+		roll_die(new Die(3,6),ref total, ref fudge, ref tried_fudge);
 		int highest_success = skill<4?4:(skill>16?16:skill);
 		margin = highest_success - total;
 		critical = false;
@@ -362,7 +429,7 @@ public class Main : Object
 			return "%d: Critical Failure (margin: %d)".printf(total,-margin);
 		} else {
 			return "%d: Failure (margin: %d)".printf(total,-margin);
-		} 
+		}
 	}
 
 	static int main (string[] args) 

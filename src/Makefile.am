@@ -4,7 +4,8 @@
 
 
 uidir = $(pkgdatadir)/ui
-ui_DATA = no_dice.ui
+ui_DATA = no_dice.ui \
+	applications-boardgames.svg
 
 
 AM_CPPFLAGS = \
