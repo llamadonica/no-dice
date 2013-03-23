@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
-  <object class="GtkAction" id="roll-action"/>
   <object class="GtkEntryBuffer" id="entrybuffer-manual-dice">
     <property name="text" translatable="yes">1d</property>
+  </object>
+  <object class="GtkAction" id="roll-action">
+    <property name="label" translatable="yes">Roll</property>
+    <signal name="activate" handler="main_on_activate_roll" swapped="no"/>
   </object>
   <object class="GtkWindow" id="window">
     <property name="visible">True</property>
@@ -102,6 +105,7 @@
             <property name="can_focus">True</property>
             <property name="hexpand">True</property>
             <property name="invisible_char">•</property>
+            <property name="width_chars">6</property>
             <signal name="insert-text" handler="main_on_validate_plus_minus_number_entry" swapped="no"/>
             <signal name="focus-out-event" handler="main_on_blur_plus_minus_number_entry" swapped="no"/>
           </object>
@@ -119,6 +123,7 @@
             <property name="hexpand">True</property>
             <property name="buffer">entrybuffer-manual-dice</property>
             <property name="invisible_char">•</property>
+            <signal name="focus-out-event" handler="main_on_blur_manual_dice_entry" swapped="no"/>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -173,13 +178,47 @@
           </packing>
         </child>
         <child>
-          <placeholder/>
+          <object class="GtkLabel" id="label1">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="halign">end</property>
+            <property name="xpad">2</property>
+            <property name="label" translatable="yes">Skill Level:</property>
+          </object>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="top_attach">2</property>
+            <property name="width">2</property>
+            <property name="height">1</property>
+          </packing>
         </child>
         <child>
-          <placeholder/>
+          <object class="GtkEntry" id="entry-skill-level">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="invisible_char">•</property>
+            <property name="width_chars">5</property>
+            <property name="text" translatable="yes">1</property>
+            <signal name="insert-text" handler="main_on_validate_number_entry" swapped="no"/>
+          </object>
+          <packing>
+            <property name="left_attach">3</property>
+            <property name="top_attach">2</property>
+            <property name="width">1</property>
+            <property name="height">1</property>
+          </packing>
         </child>
         <child>
-          <placeholder/>
+          <object class="GtkLabel" id="result-label">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+          </object>
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">3</property>
+            <property name="width">5</property>
+            <property name="height">1</property>
+          </packing>
         </child>
         <child>
           <placeholder/>

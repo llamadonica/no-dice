@@ -44,6 +44,14 @@ public class Main : Object
 
 	private int number_of_dice = 1;
 	private int adjustment = 0;
+	private List<Die?> dice ;
+	private string last_manual_entry = "1d";
+	private int skill_level = 1;
+	
+	private RadioButton radio_button_pick_dice;
+	private RadioButton radio_button_enter_dice;
+	private RadioButton radio_button_skill;
+	private Label       result_label;
 
 	public Main ()
 	{
@@ -56,14 +64,34 @@ public class Main : Object
 
 			var window    = builder.get_object ("window") as Window;
 			var combo_box = builder.get_object ("combo-box-die-type") as ComboBoxText;
+			radio_button_enter_dice = builder.get_object ("radio-button-enter-dice") as RadioButton;
+			radio_button_pick_dice = builder.get_object ("radio-button-pick-dice") as RadioButton;
+			radio_button_skill = builder.get_object ("radio-button-skill") as RadioButton;
+			result_label = builder.get_object ("result-label") as Label;
 			/* ANJUTA: Widgets initialization for no_dice.ui - DO NOT REMOVE */
 			combo_box.active_id = "d/d6";
+			this.dice = new List<Die?> ();
+			this.dice.append ({1,6,false});
 			window.show_all ();
 		} 
 		catch (Error e) {
 			stderr.printf ("Could not load UI: %s\n", e.message);
 		} 
 
+	}
+
+	[CCode (instance_pos = -1)]
+	public void on_activate_roll (Gtk.Action roll) {
+		string result;
+		if (radio_button_skill.active) {
+			int margin; bool critical;
+			result = roll_skill_die (this.skill_level, out margin, out critical);
+		}
+		if (radio_button_enter_dice.active) {
+			result = roll_multi_die_set (this.dice);
+		}
+		result_label.text = result;
+		
 	}
 
 	[CCode (instance_pos = -1)]
@@ -100,6 +128,19 @@ public class Main : Object
 			edit.text = "1";
 		}
 		this.number_of_dice = return_value;
+		return false;
+	}
+
+	
+	[CCode (instance_pos = -1)]
+	public bool on_blur_skill_level (Entry edit, DirectionType dir)
+	{
+		var return_value = int.parse (edit.text);
+		if (return_value < 1) {
+			return_value = 0;
+			edit.text = "0";
+		}
+		this.skill_level = return_value;
 		return false;
 	}
 	
@@ -144,26 +185,185 @@ public class Main : Object
 	[CCode (instance_pos = -1)]
 	public bool on_blur_manual_dice_entry (Entry edit, DirectionType dir) 
 	{
+		string working_copy = edit.text;
+		try {
+			var dice = parse_dice (ref working_copy);
+			this.last_manual_entry = edit.text;
+			this.dice = dice.copy ();
+		} catch (ParseError err) {
+			stderr.printf ("ParseError: Expected %s\n", err.message);
+			edit.text = this.last_manual_entry;
+		}
 		return false;
 	}
 
-	public void parse_digit (ref string p, StringBuilder output) throws ParseError
+	public static void parse_digit (ref string p, StringBuilder output) throws ParseError
 	{
 		var ch = p.get_char ();
 		if (ch.isdigit()) {
 			output.append_unichar (ch);
 			p = p.next_char ();
-		}
-		else {
+		} else {
 			throw new ParseError.NO_PARSE("digit");
 		}
 	}
 
-	public int parse_integer (ref string p) throws ParseError
+	public static int parse_integer (ref string p) throws ParseError
 	{
-		
+		var output = new StringBuilder();
+		bool is_negative;
+		try {
+			parse_digit (ref p,output);
+			is_negative = false;
+		} catch (ParseError err) {
+			var ch = p.get_char ();
+			if (ch == '-') {
+				output.append_unichar (ch);
+				p = p.next_char ();
+				is_negative = true;
+			} else {
+				throw new ParseError.NO_PARSE(err.message + " or '-'");
+			}
+		}
+		if (is_negative) {
+			parse_digit (ref p,output);
+		}
+		bool is_valid = true;
+		while (is_valid) {
+			try {
+				parse_digit (ref p,output);
+			} catch (ParseError err) {
+				is_valid = false;
+			}
+		}
+		return int.parse (output.str);
+	}
+	public static Die parse_die_or_constant (ref string p) throws ParseError
+	{
+		var static_part = parse_integer (ref p);
+		var ch = p.get_char ();
+		if (ch == 'd') {
+			p = p.next_char ();
+			ch = p.get_char ();
+			if (ch == 'F') {
+				p = p.next_char ();
+				return {static_part, 1, true};
+			} else if (ch.isdigit()) {
+				var sides = parse_integer (ref p);
+				return {static_part,sides,false};
+			} else {
+				return {static_part,6,false};
+			}
+		} 
+		return {static_part, 0, false};
 	}
 
+	public static List<Die?> parse_dice (ref string p) throws ParseError 
+	{
+		var dice = new List<Die?> ();
+		bool is_valid = true;
+		bool negate = false;
+		while (is_valid) {
+			var die = parse_die_or_constant (ref p);
+			if (negate) 
+				die.const_or_number = -die.const_or_number;
+			dice.append(die);
+			var ch = p.get_char();
+			while (ch == ' ') {
+				p = p.next_char ();
+				ch = p.get_char();
+			}
+			if (ch == '+') {
+				negate = false;
+				p = p.next_char ();
+			    ch = p.get_char();
+			    while (ch == ' ') {
+				   p = p.next_char ();
+				   ch = p.get_char();
+			    }
+			} else if (ch == '\0') {
+				is_valid = false;
+			} else if (ch == '-') {
+				negate = true;
+				p = p.next_char ();
+			    ch = p.get_char();
+			    while (ch == ' ') {
+				   p = p.next_char ();
+				   ch = p.get_char();
+			    }
+			} else {
+			    throw new ParseError.NO_PARSE ("'+' or '-' or EOF");
+			}
+		}
+		return dice;
+	}
+
+	static void roll_die (Die die, ref int total, ref bool fudge, ref bool tried_fudge) {
+		if (die.sides == 0) {
+			total += die.const_or_number;
+			return;
+		} 
+		int min, max;
+		if (die.is_fudge) {
+			tried_fudge = true;
+			min = -1;
+			max = 1;
+		} else {
+			fudge = false;
+			min = 1;
+			max = die.sides;
+		}
+		for (int i = 0; i < die.const_or_number; i++) {
+			total += Random.int_range(min, max);
+		}
+	}
+
+	static string roll_one_die_set (Die die, int adjustment) {
+		bool fudge = true, tried_fudge = false;
+		roll_die (die, ref adjustment, ref fudge, ref tried_fudge);
+		if (fudge && tried_fudge && adjustment > 0) {
+			return "+%d".printf(adjustment);
+		}
+		return "%d".printf(adjustment);
+	}
+	static string roll_multi_die_set (List<Die?> dice) {
+		bool fudge = true, tried_fudge = false;
+		int total = 0;
+		foreach (Die die in dice) {
+			roll_die (die, ref total, ref fudge, ref tried_fudge);
+		}
+		if (fudge && tried_fudge && total > 0) {
+			return "+%d".printf(total);
+		}
+		return "%d".printf(total);
+	}
+	static string roll_skill_die (int skill,out bool critical, out int margin) {
+		bool fudge = false, tried_fudge = false;
+		int total = 0;
+		roll_die({3,6,false},ref total, ref fudge, ref tried_fudge);
+		int highest_success = skill<4?4:(skill>16?16:skill);
+		margin = highest_success - total;
+		critical = false;
+		
+		if (total < 5) critical = true;
+		if (skill > 5 && total < 6) critical = true;
+		if (skill > 14 && total < 7) critical = true;
+		if (skill > 15 && total < 8) critical = true;
+		
+		if (total > 17) critical = true;
+		if (skill < 16 && total > 16) critical = true;
+		if (total >= skill + 10) critical = true;
+		
+		if (margin >= 0 && critical) {
+			return "%d: Critical Success (margin: %d)".printf(total,margin);
+		} else if (margin >= 0) {
+			return "%d: Success (margin: %d)".printf(total,margin);
+		} else if (critical) {
+			return "%d: Critical Failure (margin: %d)".printf(total,-margin);
+		} else {
+			return "%d: Failure (margin: %d)".printf(total,-margin);
+		} 
+	}
 
 	static int main (string[] args) 
 	{
