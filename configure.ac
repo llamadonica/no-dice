@@ -25,5 +25,6 @@ PKG_CHECK_MODULES(NO_DICE, [gtk+-3.0 ])
 AC_OUTPUT([
 Makefile
 src/Makefile
+src/no_dice.desktop
 
 ])
