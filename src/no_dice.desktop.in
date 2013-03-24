@@ -1,0 +1,10 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Name=No Dice
+GenericName=Dice-rolling utility
+Comment=Roll dice on your desktop
+Categories=GTK;Utility
+Exec=@prefix@/bin/no_dice
+Icon=no_dice
