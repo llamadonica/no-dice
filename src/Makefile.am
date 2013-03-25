@@ -3,6 +3,14 @@
 ## Created by Anjuta
 
 
+if MINGW_BUILD
+MINGW_FLAG = -D MINGW_BUILD
+MINGW_EXTRA_LDFLAG = -Wl,--export-all-symbols
+else
+MINGW_FLAG = 
+MINGW_EXTRA_LDFLAG = -Wl,--export-dynamic
+endif
+
 uidir = $(pkgdatadir)/ui
 ui_DATA = no_dice.ui
 
@@ -29,10 +37,11 @@ no_dice_SOURCES = \
 	no_dice.vala config.vapi
 
 no_dice_VALAFLAGS =  \
-	--pkg gtk+-3.0
+	--pkg gtk+-3.0 \
+	 $(MINGW_FLAG)
 
 no_dice_LDFLAGS = \
-	-Wl,--export-dynamic
+	$(MINGW_EXTRA_LDFLAG)
 
 no_dice_LDADD = $(NO_DICE_LIBS)
 

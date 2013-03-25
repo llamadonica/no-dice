@@ -52,7 +52,12 @@ public class Main : Object
 	 * Uncomment this line when you are done testing and building a tarball
 	 * or installing
 	 */
-	const string UI_FILE = Config.PACKAGE_DATA_DIR + "/ui/" + "no_dice.ui";
+#if MINGW_BUILD
+	const string UI_FILE =  Config.PACKAGE_NAME + Path.DIR_SEPARATOR_S +
+		"ui" + Path.DIR_SEPARATOR_S + "no_dice.ui";
+#else
+	const string UI_FILE = Config.PACKAGE_DATA_DIR + Path.DIR_SEPARATOR_S + "ui" + Path.DIR_SEPARATOR_S + "no_dice.ui";
+#endif
 	// const string UI_FILE = "src/no_dice.ui";
 
 	/* ANJUTA: Widgets declaration for no_dice.ui - DO NOT REMOVE */
@@ -76,7 +81,7 @@ public class Main : Object
 		try 
 		{
 			var builder = new Builder ();
-			builder.add_from_file (UI_FILE);
+			builder.add_from_file (this.path_from_resource(UI_FILE));
 			builder.connect_signals (this);
 
 			var window    = builder.get_object ("window") as Window;
@@ -98,6 +103,24 @@ public class Main : Object
 			stderr.printf ("Could not load UI: %s\n", e.message);
 		} 
 
+	}
+
+	public static string? path_from_resource(string resource) {
+#if MINGW_BUILD
+		var    paths = Environment.get_system_data_dirs ();
+		foreach (string path in paths) {
+			var resultant_path = Path.build_filename(path, resource, null);
+			stderr.printf( "Trying path %s\n", resultant_path);
+			
+			if (FileUtils.test (resultant_path, FileTest.EXISTS)) {
+				stderr.printf( "Found file at %s\n", resultant_path);
+				return resultant_path;
+			}
+		}
+		return null;
+#else
+		return resource;
+#endif
 	}
 
 	[CCode (instance_pos = -1)]

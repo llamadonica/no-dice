@@ -268,6 +268,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+@MINGW_BUILD_FALSE@MINGW_FLAG = 
+@MINGW_BUILD_TRUE@MINGW_FLAG = -D MINGW_BUILD
+@MINGW_BUILD_FALSE@MINGW_EXTRA_LDFLAG = -Wl,--export-dynamic
+@MINGW_BUILD_TRUE@MINGW_EXTRA_LDFLAG = -Wl,--export-all-symbols
 uidir = $(pkgdatadir)/ui
 ui_DATA = no_dice.ui
 desktopdir = $(datadir)/applications
@@ -289,10 +293,11 @@ no_dice_SOURCES = \
 	no_dice.vala config.vapi
 
 no_dice_VALAFLAGS = \
-	--pkg gtk+-3.0
+	--pkg gtk+-3.0 \
+	 $(MINGW_FLAG)
 
 no_dice_LDFLAGS = \
-	-Wl,--export-dynamic
+	$(MINGW_EXTRA_LDFLAG)
 
 no_dice_LDADD = $(NO_DICE_LIBS)
 EXTRA_DIST = $(ui_DATA) $(icon_DATA) $(desktop_DATA)

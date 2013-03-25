@@ -56,7 +56,6 @@ Section "Pomeranian" SEC01
   File /r bin
   File /r share
   File /r doc
-  File /r lib
   WriteRegStr HKLM "Software\No Dice" "" $INSTDIR
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   
