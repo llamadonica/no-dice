@@ -18,9 +18,21 @@ LT_INIT
 dnl Check for vala
 AM_PROG_VALAC([0.10.0])
 
-
+AS_CASE([$host],
+       [*-*-mingw32], [mingw=true],
+       [mingw=false]
+     )
+     
+AM_CONDITIONAL([MINGW_BUILD], [test x$mingw = xtrue])
+     
 PKG_CHECK_MODULES(NO_DICE, [gtk+-3.0 ])
 
+AS_CASE([$host],
+       [*-*-mingw32], [AC_CONFIG_FILES([ 
+			dll/Makefile
+			installer/pomeranian.nsi
+			installer/Makefile])]
+     )
 
 AC_OUTPUT([
 Makefile
