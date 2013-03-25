@@ -9,19 +9,26 @@ AM_INIT_AUTOMAKE([1.11])
 
 AM_SILENT_RULES([yes])
 
-AC_PROG_CC
-
-
 LT_INIT
 
 
 dnl Check for vala
 AM_PROG_VALAC([0.10.0])
 
+dnl Checking for ImageMagick
+AC_ARG_VAR(CONVERT_PROG)
+
+dnl Checking whether build is for MingW
 AS_CASE([$host],
        [*-*-mingw32], [mingw=true],
        [mingw=false]
      )
+
+if test x$mingw = xtrue; then
+  if test -z "$CONVERT_PROG"; then
+    AC_PATH_PROG(CONVERT_PROG,convert)
+  fi
+fi
      
 AM_CONDITIONAL([MINGW_BUILD], [test x$mingw = xtrue])
      

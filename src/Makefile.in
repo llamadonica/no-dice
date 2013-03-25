@@ -159,6 +159,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CONVERT_PROG = @CONVERT_PROG@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -277,8 +278,10 @@ ui_DATA = no_dice.ui
 desktopdir = $(datadir)/applications
 desktop_in_files = no_dice.desktop.in		
 desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
-icondir = $(datadir)/pixmaps
-icon_DATA = no_dice.svg
+@MINGW_BUILD_FALSE@icondir = $(datadir)/pixmaps
+@MINGW_BUILD_TRUE@icondir = $(pkgdatadir)/ui
+@MINGW_BUILD_FALSE@icon_DATA = no_dice.svg
+@MINGW_BUILD_TRUE@icon_DATA = no_dice.png
 AM_CPPFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(localedir)"\" \
 	-DPACKAGE_SRC_DIR=\""$(srcdir)"\" \
@@ -304,7 +307,7 @@ EXTRA_DIST = $(ui_DATA) $(icon_DATA) $(desktop_DATA)
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .obj
+.SUFFIXES: .c .lo .o .obj .png .svg
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -653,7 +656,8 @@ info: info-am
 info-am:
 
 install-data-am: install-desktopDATA install-iconDATA install-uiDATA
-
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) install-data-hook
 install-dvi: install-dvi-am
 
 install-dvi-am:
@@ -701,29 +705,39 @@ ps-am:
 uninstall-am: uninstall-binPROGRAMS uninstall-desktopDATA \
 	uninstall-iconDATA uninstall-local uninstall-uiDATA
 
-.MAKE: install-am install-strip
+.MAKE: install-am install-data-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
 	clean-generic clean-libtool cscopelist ctags distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-binPROGRAMS install-data \
-	install-data-am install-desktopDATA install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-iconDATA install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip install-uiDATA installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-desktopDATA \
-	uninstall-iconDATA uninstall-local uninstall-uiDATA
+	install-data-am install-data-hook install-desktopDATA \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-iconDATA install-info \
+	install-info-am install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip install-uiDATA \
+	installcheck installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-desktopDATA uninstall-iconDATA uninstall-local \
+	uninstall-uiDATA
 
 
 # Remove ui directory on uninstall
 uninstall-local:
 	-rm -r $(uidir)
 	-rm -r $(pkgdatadir)
+
+.svg.png:
+	convert -background none $< $@
+
+install-data-hook:
+	for CSS_NAME in gtk-win32-classic gtk-win32-xp; do \
+	  mkdir -p $(DESTDIR)$(datadir)/themes/$$CSS_NAME/gtk-3.0 ;\
+	  echo @import url\(\"resource:///org/gtk/libgtk/$$CSS_NAME.css\"\) >$(DESTDIR)$(datadir)/themes/$$CSS_NAME/gtk-3.0/gtk.css ;\
+	done
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -18,8 +18,13 @@ desktopdir = $(datadir)/applications
 desktop_in_files = no_dice.desktop.in		
 desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
 
+if MINGW_BUILD
+icondir = $(pkgdatadir)/ui
+icon_DATA = no_dice.png
+else
 icondir = $(datadir)/pixmaps
 icon_DATA = no_dice.svg
+endif
 
 AM_CPPFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(localedir)"\" \
@@ -52,3 +57,11 @@ uninstall-local:
 	-rm -r $(uidir)
 	-rm -r $(pkgdatadir)
 
+.svg.png:
+	convert -background none $< $@
+	
+install-data-hook:
+	for CSS_NAME in gtk-win32-classic gtk-win32-xp; do \
+	  mkdir -p $(DESTDIR)$(datadir)/themes/$$CSS_NAME/gtk-3.0 ;\
+	  echo @import url\(\"resource:///org/gtk/libgtk/$$CSS_NAME.css\"\) >$(DESTDIR)$(datadir)/themes/$$CSS_NAME/gtk-3.0/gtk.css ;\
+	done

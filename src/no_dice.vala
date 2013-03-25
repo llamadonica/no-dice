@@ -53,8 +53,10 @@ public class Main : Object
 	 * or installing
 	 */
 #if MINGW_BUILD
-	const string UI_FILE =  Config.PACKAGE_NAME + Path.DIR_SEPARATOR_S +
+	const string UI_FILE   =  Config.PACKAGE_NAME + Path.DIR_SEPARATOR_S +
 		"ui" + Path.DIR_SEPARATOR_S + "no_dice.ui";
+	const string ICON_FILE =  Config.PACKAGE_NAME + Path.DIR_SEPARATOR_S +
+		"ui" + Path.DIR_SEPARATOR_S + "no_dice.png";
 #else
 	const string UI_FILE = Config.PACKAGE_DATA_DIR + Path.DIR_SEPARATOR_S + "ui" + Path.DIR_SEPARATOR_S + "no_dice.ui";
 #endif
@@ -81,7 +83,7 @@ public class Main : Object
 		try 
 		{
 			var builder = new Builder ();
-			builder.add_from_file (this.path_from_resource(UI_FILE));
+			builder.add_from_file (path_from_resource(UI_FILE));
 			builder.connect_signals (this);
 
 			var window    = builder.get_object ("window") as Window;
@@ -93,6 +95,15 @@ public class Main : Object
             about_dialog = builder.get_object ("about-dialog") as AboutDialog;
             
 			/* ANJUTA: Widgets initialization for no_dice.ui - DO NOT REMOVE */
+#if MINGW_BUILD
+			var logo = new Gdk.Pixbuf.from_file (path_from_resource(ICON_FILE));
+			window.icon       = logo;
+			about_dialog.logo = logo;
+			
+			var provider      = CssProvider.get_named ("gtk-win32", "xp");
+			apply_css (window, provider);
+			StyleContext.reset_widgets (Gdk.Screen.get_default());
+#endif
 			combo_box_die_type.active_id = "d/d6";
 			this.dice = new List<Die> ();
 			this.dice.append (new Die(1,6));
@@ -110,10 +121,8 @@ public class Main : Object
 		var    paths = Environment.get_system_data_dirs ();
 		foreach (string path in paths) {
 			var resultant_path = Path.build_filename(path, resource, null);
-			stderr.printf( "Trying path %s\n", resultant_path);
 			
 			if (FileUtils.test (resultant_path, FileTest.EXISTS)) {
-				stderr.printf( "Found file at %s\n", resultant_path);
 				return resultant_path;
 			}
 		}
@@ -121,6 +130,16 @@ public class Main : Object
 #else
 		return resource;
 #endif
+	}
+
+	public static void apply_css (Widget w, CssProvider css) {
+		w.get_style_context().add_provider(css, uint.MAX);
+		if (w is Container) {
+			(w as Container).forall((subwidget) => 
+				{
+					apply_css (subwidget, css);
+				});
+		}
 	}
 
 	[CCode (instance_pos = -1)]
@@ -458,6 +477,7 @@ public class Main : Object
 	static int main (string[] args) 
 	{
 		Gtk.init (ref args);
+		// Gtk.Settings.get_default().gtk_theme_name;
 		var app = new Main ();
 
 		Gtk.main ();
