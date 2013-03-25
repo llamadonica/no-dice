@@ -5,7 +5,3 @@ installer_DATA = no-dice.nsi
 installerdir = $(prefix)
 
 EXTRA_DIST = $(installer_DATA)
-
-	
-
-	

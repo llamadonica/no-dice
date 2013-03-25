@@ -30,7 +30,7 @@ PKG_CHECK_MODULES(NO_DICE, [gtk+-3.0 ])
 AS_CASE([$host],
        [*-*-mingw32], [AC_CONFIG_FILES([ 
 			dll/Makefile
-			installer/pomeranian.nsi
+			installer/no-dice.nsi
 			installer/Makefile])]
      )
 
